@@ -6,15 +6,30 @@ import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 
+// Verificação das variáveis de ambiente
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'STEAM_API_KEY',
+  'BASE_URL',
+  'SESSION_SECRET'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`Variável de ambiente ${envVar} não está definida`);
+  }
+}
+
 // Configuração do Supabase
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_ANON_KEY
 );
 
 // Configuração da sessão
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false
 }));
