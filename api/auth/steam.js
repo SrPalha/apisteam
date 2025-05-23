@@ -58,27 +58,25 @@ passport.deserializeUser((user, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Rota de autenticação Steam
-app.get('/api/auth/steam', (req, res, next) => {
-  const { user_id } = req.query;
-  // Monta manualmente a URL de retorno com o parâmetro state
-  const returnUrl = `${process.env.BASE_URL}/api/auth/steam/return?state=${user_id}`;
+// Rota dinâmica para iniciar o login Steam
+app.get('/api/auth/steam/:user_id', (req, res, next) => {
+  const { user_id } = req.params;
+  // Monta o returnURL dinâmico
+  const returnUrl = `${process.env.BASE_URL}/api/auth/steam/return/${user_id}`;
   passport.authenticate('steam', {
     failureRedirect: '/',
-    state: user_id,
-    returnURL: returnUrl // força o parâmetro state na URL de retorno
+    returnURL: returnUrl
   })(req, res, next);
 });
 
-// Rota de retorno após autenticação
-app.get('/api/auth/steam/return', 
+// Rota dinâmica de retorno após autenticação
+app.get('/api/auth/steam/return/:user_id',
   (req, res, next) => {
     passport.authenticate('steam', { failureRedirect: '/' })(req, res, next);
   },
   async (req, res) => {
     try {
-      // Recupera o user_id do parâmetro state
-      const user_id = req.query.state;
+      const user_id = req.params.user_id;
       if (!user_id) {
         return res.redirect('https://cs.eloninja.com.br/profile?error=not_logged');
       }
