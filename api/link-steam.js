@@ -38,10 +38,14 @@ export default async function handler(req, res) {
       })
       .eq('id', user_id);
 
-    if (error) return res.status(500).send('Erro ao atualizar perfil no Supabase.');
+    if (error) {
+      console.error('Erro do Supabase:', error);
+      return res.status(500).send('Erro ao atualizar perfil no Supabase.');
+    }
 
     res.status(200).send('Conta Steam vinculada com sucesso!');
   } catch (err) {
+    console.error('Erro inesperado ao vincular Steam:', err);
     res.status(500).send('Erro inesperado ao vincular Steam.');
   }
 } 
