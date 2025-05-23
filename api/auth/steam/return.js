@@ -16,11 +16,20 @@ export default async function handler(req, res) {
       return res.redirect('https://cs.eloninja.com.br/profile?error=steam_callback');
     }
 
+    // Buscar dados do usuário na Steam Web API
+    const apiKey = process.env.STEAM_API_KEY;
+    const steamApiUrl = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${steamId}`;
+    const response = await fetch(steamApiUrl);
+    const data = await response.json();
+    const player = data.response.players[0];
+
     // Atualiza o perfil do usuário no Supabase
     const { error } = await supabase
       .from('profiles')
       .update({
         steam_id: steamId,
+        steam_username: player?.personaname || null,
+        steam_avatar: player?.avatarfull || null,
         steam_linked: true,
         steam_linked_at: new Date().toISOString(),
       })
