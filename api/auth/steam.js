@@ -58,11 +58,11 @@ passport.deserializeUser((user, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Rota para iniciar o login Steam (usando sessão para guardar user_id)
+// Rota para iniciar o login Steam (passando user_id na query do returnURL)
 app.get('/api/auth/steam', (req, res, next) => {
   const { user_id } = req.query;
-  req.session.user_id = user_id; // Salva o user_id na sessão
-  const returnUrl = `${process.env.BASE_URL}/api/auth/steam/return`;
+  // Inclui o user_id no returnURL
+  const returnUrl = `${process.env.BASE_URL}/api/auth/steam/return?user_id=${user_id}`;
   passport.authenticate('steam', {
     failureRedirect: '/',
     returnURL: returnUrl
