@@ -1,8 +1,8 @@
-import { createRouter } from 'next-connect';
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Método não permitido' });
+  }
 
-const router = createRouter();
-
-router.get(async (req, res) => {
   const { steamId } = req.query;
   const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
@@ -67,6 +67,4 @@ router.get(async (req, res) => {
     console.error('Erro ao buscar inventário:', error);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
-});
-
-export default router.handler(); 
+} 
