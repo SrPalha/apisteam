@@ -60,7 +60,11 @@ app.use(passport.session());
 
 // Rota de autenticação Steam
 app.get('/api/auth/steam', (req, res, next) => {
-  passport.authenticate('steam', { failureRedirect: '/' })(req, res, next);
+  const { user_id } = req.query;
+  passport.authenticate('steam', {
+    failureRedirect: '/',
+    state: user_id // Passa o user_id como state
+  })(req, res, next);
 });
 
 // Rota de retorno após autenticação
@@ -70,8 +74,8 @@ app.get('/api/auth/steam/return',
   },
   async (req, res) => {
     try {
-      // Recebe o user_id do Supabase via query param
-      const user_id = req.query.user_id;
+      // Recupera o user_id do parâmetro state
+      const user_id = req.query.state;
       if (!user_id) {
         return res.redirect('https://cs.eloninja.com.br/profile?error=not_logged');
       }
