@@ -61,9 +61,12 @@ app.use(passport.session());
 // Rota de autenticação Steam
 app.get('/api/auth/steam', (req, res, next) => {
   const { user_id } = req.query;
+  // Monta manualmente a URL de retorno com o parâmetro state
+  const returnUrl = `${process.env.BASE_URL}/api/auth/steam/return?state=${user_id}`;
   passport.authenticate('steam', {
     failureRedirect: '/',
-    state: user_id // Passa o user_id como state
+    state: user_id,
+    returnURL: returnUrl // força o parâmetro state na URL de retorno
   })(req, res, next);
 });
 
