@@ -72,13 +72,16 @@ app.get('/api/auth/steam', (req, res, next) => {
 // Rota de retorno após autenticação (recupera user_id da sessão)
 app.get('/api/auth/steam/return',
   (req, res, next) => {
+    console.log('Recebido callback da Steam!');
     passport.authenticate('steam', { failureRedirect: '/' })(req, res, next);
   },
   async (req, res) => {
     try {
       const user_id = req.session.user_id; // Recupera da sessão
+      console.log('Callback Steam: user_id recuperado da sessão:', user_id);
       if (!user_id) {
-        return res.redirect('https://cs.eloninja.com.br/profile?error=not_logged');
+        console.log('Callback Steam: user_id não encontrado na sessão!');
+        return res.status(400).send('Erro: user_id não encontrado na sessão.');
       }
 
       // Atualiza o perfil do usuário no Supabase
@@ -95,14 +98,14 @@ app.get('/api/auth/steam/return',
 
       if (error) {
         console.error('Erro ao atualizar perfil:', error);
-        return res.redirect('https://cs.eloninja.com.br/profile?error=update_failed');
+        return res.status(500).send('Erro ao atualizar perfil no Supabase.');
       }
 
-      // Redireciona de volta para o frontend
-      res.redirect('https://cs.eloninja.com.br/profile?success=steam_linked');
+      // Retorna mensagem simples para debug
+      res.send('Autorização Steam finalizada com sucesso! Seu perfil foi vinculado.');
     } catch (error) {
       console.error('Erro no callback Steam:', error);
-      res.redirect('https://cs.eloninja.com.br/profile?error=server_error');
+      res.status(500).send('Erro inesperado no callback Steam.');
     }
   }
 );
