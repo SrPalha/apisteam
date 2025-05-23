@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+// ATENÇÃO: Nunca exponha a Service Role Key no frontend!
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // Service Role Key para permissões administrativas
 );
 
 export default async function handler(req, res) {
