@@ -27,19 +27,23 @@ export default async function handler(req, res) {
     const data = await response.json();
     const player = data.response.players[0];
 
-    const { error } = await supabase
+    const updatePayload = {
+      steam_id,
+      steam_username: player?.personaname || null,
+      steam_avatar: player?.avatarfull || null,
+      steam_linked: true,
+      steam_linked_at: new Date().toISOString(),
+    };
+    console.log('Payload enviado para o Supabase:', updatePayload);
+
+    const { error, data: updateData } = await supabase
       .from('profiles')
-      .update({
-        steam_id,
-        steam_username: player?.personaname || null,
-        steam_avatar: player?.avatarfull || null,
-        steam_linked: true,
-        steam_linked_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', user_id);
 
     if (error) {
       console.error('Erro do Supabase:', error);
+      console.error('Retorno completo do erro:', JSON.stringify(error, null, 2));
       return res.status(500).send('Erro ao atualizar perfil no Supabase.');
     }
 
