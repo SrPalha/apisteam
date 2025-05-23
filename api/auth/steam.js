@@ -73,7 +73,7 @@ app.get('/api/auth/steam/return',
       // Recebe o user_id do Supabase via query param
       const user_id = req.query.user_id;
       if (!user_id) {
-        return res.redirect('/profile?error=not_logged');
+        return res.redirect('https://cs.eloninja.com.br/profile?error=not_logged');
       }
 
       // Atualiza o perfil do usuário no Supabase
@@ -94,7 +94,7 @@ app.get('/api/auth/steam/return',
       }
 
       // Redireciona de volta para o frontend
-      res.redirect('/profile?success=steam_linked');
+      res.redirect('https://cs.eloninja.com.br/profile?success=steam_linked');
     } catch (error) {
       console.error('Erro no callback Steam:', error);
       res.redirect('/profile?error=server_error');
