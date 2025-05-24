@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   if (!name) {
     return res.status(400).json({ error: 'Missing name' });
   }
-
+ 
   const url = 'https://api.skinport.com/v1/items?app_id=730&currency=BRL';
   try {
     const response = await fetch(url, {
