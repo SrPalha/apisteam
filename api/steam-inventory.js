@@ -60,14 +60,23 @@ export default async function handler(req, res) {
       let stickers = Array.isArray(item.stickers)
         ? item.stickers.map(s => ({ name: s.name, image: s.image || s.icon_url || '' }))
         : [];
+      let paintseed = null;
+      let patternindex = null;
+      let marketable = item.marketable ?? 0;
+      let tradable = item.tradable ?? 0;
+      let image = item.image || item.icon_url || '';
+      let price = item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0;
+      let condition = (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS');
+      let name = item.marketname || item.name || item.markethashname || '';
       try {
         // Buscar detalhes do item
-        const itemUrl = `https://www.steamwebapi.com/steam/api/item?key=${API_KEY}&market_hash_name=${encodeURIComponent(item.marketname || item.name || item.markethashname || '')}`;
+        const itemUrl = `https://www.steamwebapi.com/steam/api/item?key=${API_KEY}&market_hash_name=${encodeURIComponent(name)}`;
         const itemResp = await fetchWithTimeout(itemUrl, { timeout: 10000 });
         if (itemResp.ok) {
           const itemData = await itemResp.json();
           itemtype = itemData.itemtype || itemData.type || itemtype;
           rarity = itemData.rarity || rarity;
+          image = itemData.image || image;
           // Buscar float se houver inspect link
           const inspectUrl = itemData.inspectlink || item.inspect_link;
           if (inspectUrl) {
@@ -75,6 +84,10 @@ export default async function handler(req, res) {
             const floatResp = await fetchWithTimeout(floatUrl, { timeout: 8000 });
             if (floatResp.ok) {
               floatInfo = await floatResp.json();
+              if (floatInfo) {
+                paintseed = floatInfo.paintseed ?? null;
+                patternindex = floatInfo.paintindex ?? null;
+              }
             }
           }
           // Buscar coleção
@@ -84,7 +97,7 @@ export default async function handler(req, res) {
             const colData = await colResp.json();
             if (Array.isArray(colData)) {
               for (const col of colData) {
-                if (col.items && col.items.some(i => i.markethashname === (item.marketname || item.name || item.markethashname || ''))) {
+                if (col.items && col.items.some(i => i.markethashname === name)) {
                   collection = col.name;
                   break;
                 }
@@ -93,21 +106,23 @@ export default async function handler(req, res) {
           }
         }
       } catch (e) {
-        console.log('[steam-inventory] Erro ao enriquecer item:', item.name, e);
+        console.log('[steam-inventory] Erro ao enriquecer item:', name, e);
       }
       return {
         id: item.assetid || item.id,
-        name: item.marketname || item.name || item.markethashname || '',
-        image: item.image || item.icon_url || '',
-        price: item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0,
+        name,
+        image,
+        price,
         float: floatInfo?.floatvalue ?? item.float ?? null,
-        condition: (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS'),
+        paintseed,
+        patternindex,
+        condition,
         rarity,
         stickers,
         type: itemtype || item.itemgroup || item.type || '',
         collection,
-        marketable: item.marketable ?? 0,
-        tradable: item.tradable ?? 0,
+        marketable,
+        tradable,
         listedAt: item.time || null,
         priceChange: item.priceChange ?? null,
       };
