@@ -101,21 +101,19 @@ export default async function handler(req, res) {
           // Buscar float se houver inspect link
           if (usedInspectLink) {
             console.log('[steam-inventory] Buscando float para', name, usedInspectLink);
-            const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(usedInspectLink)}`;
+            const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(usedInspectLink)}&production=1`;
             const floatResp = await fetchWithTimeout(floatUrl, { timeout: 8000 });
-            if (floatResp.ok) {
-              floatInfo = await floatResp.json();
-              if (floatInfo) {
-                paintseed = floatInfo.paintseed ?? null;
-                patternindex = floatInfo.paintindex ?? null;
-                if (floatInfo.floatvalue !== undefined) {
-                  console.log('[steam-inventory] Float encontrado para', name, floatInfo.floatvalue);
-                } else {
-                  console.log('[steam-inventory] Float NÃO encontrado para', name);
-                }
+            const floatText = await floatResp.text();
+            try {
+              const floatJson = JSON.parse(floatText);
+              floatInfo = floatJson;
+              if (floatInfo && floatInfo.floatvalue !== undefined) {
+                console.log('[steam-inventory] Float encontrado para', name, floatInfo.floatvalue);
+              } else {
+                console.log('[steam-inventory] Float NÃO encontrado para', name, floatText);
               }
-            } else {
-              console.log('[steam-inventory] Falha ao buscar float para', name, floatResp.status);
+            } catch (e) {
+              console.log('[steam-inventory] Erro ao parsear resposta do float:', floatText);
             }
           } else {
             console.log('[steam-inventory] Sem inspect link para buscar float de', name);
