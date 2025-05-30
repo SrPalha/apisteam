@@ -1,19 +1,23 @@
 const API_KEY = 'XYVYXM7T3TYBY9IN';
 
 async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 10000 } = options;
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(resource, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
+  const { timeout = 10000, retries = 0 } = options;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (err) {
+      clearTimeout(id);
+      if (attempt === retries) throw err;
+      // Retry
+      console.log('[fetchWithTimeout] Tentando novamente após erro:', err);
+    }
   }
 }
 
@@ -102,7 +106,7 @@ export default async function handler(req, res) {
           if (usedInspectLink) {
             console.log('[steam-inventory] Buscando float para', name, usedInspectLink);
             const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(usedInspectLink)}&production=1`;
-            const floatResp = await fetchWithTimeout(floatUrl, { timeout: 8000 });
+            const floatResp = await fetchWithTimeout(floatUrl, { timeout: 15000, retries: 1 });
             const floatText = await floatResp.text();
             try {
               const floatJson = JSON.parse(floatText);
