@@ -45,34 +45,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ items: [], message: 'Inventário vazio ou não encontrado.' });
     }
 
-    // Opcional: filtrar apenas skins (exemplo: type === 'skin' ou weapon)
+    // Filtrar apenas armas (rifle, pistol, knife, smg, shotgun, sniper, glove)
     const filtered = inventory.filter(item =>
-      item.type?.toLowerCase().includes('skin') ||
-      item.type?.toLowerCase().includes('rifle') ||
-      item.type?.toLowerCase().includes('pistol') ||
-      item.type?.toLowerCase().includes('knife') ||
-      item.type?.toLowerCase().includes('smg') ||
-      item.type?.toLowerCase().includes('shotgun') ||
-      item.type?.toLowerCase().includes('sniper') ||
-      item.type?.toLowerCase().includes('glove')
+      ['rifle', 'pistol', 'knife', 'smg', 'shotgun', 'sniper', 'glove'].includes(
+        (item.itemgroup || '').toLowerCase()
+      )
     );
 
     // Padronizar resposta para o frontend
     const items = filtered.map(item => ({
       id: item.assetid || item.id,
-      name: item.marketname || item.name || item.market_hash_name,
-      image: item.image || item.icon_url || (item.icon_url ? `https://steamcommunity-a.akamaihd.net/economy/image/${item.icon_url}` : ''),
+      name: item.marketname || item.name || item.markethashname,
+      image: item.image || item.icon_url,
       price: item.price || item.pricelatest || 0,
       float: item.float,
-      rarity: item.rarity,
-      condition: item.exterior || item.condition,
+      rarity: item.rarity || item.tag6,
+      condition: item.wear || item.condition || item.tag5,
       stickers: item.stickers || [],
-      type: item.type,
+      type: item.itemgroup || item.type,
       collection: item.collection,
       marketable: item.marketable,
       tradable: item.tradable,
-      time: item.time, // se vier do backend
-      priceChange: item.priceChange, // se vier do backend
+      time: item.time,
+      priceChange: item.priceChange,
     }));
 
     console.log(`[steam-inventory] Inventário processado: ${items.length} skins`);
