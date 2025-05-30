@@ -1,12 +1,23 @@
 export default async function handler(req, res) {
   // Configurar CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  const allowedOrigins = [
+    'http://localhost:8080',
+    'https://cs.eloninja.com.br',
+    'https://eloninja.com.br'
+  ];
+  
+  const origin = req.headers.origin;
+  const corsHeaders = {
+    'Access-Control-Allow-Credentials': true,
+    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
+    'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  };
+
+  // Aplicar headers CORS
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
