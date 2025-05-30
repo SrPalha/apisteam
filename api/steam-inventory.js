@@ -1,4 +1,4 @@
-const CSFLOAT_API_KEY = 'aOO_QnoGm2S2E20BsKYf0CVfs4jQLgGi';
+const API_KEY = 'XYVYXM7T3TYBY9IN';
 
 // Função para encontrar a melhor correspondência entre o item Steam e as listagens do CSFloat
 function findBestMatch(steamItem, csfloatResults) {
@@ -19,63 +19,18 @@ function findBestMatch(steamItem, csfloatResults) {
   return csfloatResults[0];
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export default async function handler(req, res) {
-  console.log('[steam-inventory] Início handler', { query: req.query });
   const { steam_id } = req.query;
-  if (!steam_id) {
-    console.log('[steam-inventory] steam_id ausente');
-    return res.status(400).json({ error: 'steam_id is required' });
-  }
+  if (!steam_id) return res.status(400).json({ error: 'steam_id is required' });
 
-  // 1. Buscar inventário Steam
-  const inventoryUrl = `https://steamcommunity.com/inventory/${steam_id}/730/2`;
-  console.log('[steam-inventory] Buscando inventário Steam:', inventoryUrl);
-  const response = await fetch(inventoryUrl);
-  if (!response.ok) {
-    console.log('[steam-inventory] Erro ao buscar inventário Steam', { status: response.status });
-    return res.status(500).json({ error: 'Erro ao buscar inventário Steam' });
-  }
+  const url = `https://www.steamwebapi.com/steam/api/inventory?key=${API_KEY}&steam_id=${steam_id}`;
+  const response = await fetch(url);
+  if (!response.ok) return res.status(500).json({ error: 'Erro ao buscar inventário SteamWebAPI' });
+
   const inventory = await response.json();
-  console.log('[steam-inventory] Inventário Steam recebido', {
-    assets: inventory.assets?.length,
-    descriptions: inventory.descriptions?.length
-  });
-
-  // 2. Enriquecer com CSFloat (limite de 10 para evitar rate limit)
-  const enrichedItems = await Promise.all(
-    (inventory.descriptions || []).slice(0, 10).map(async (item, idx) => {
-      let csfloat = null;
-      try {
-        console.log(`[steam-inventory] [${idx}] Buscando CSFloat para:`, item.market_hash_name);
-        const floatRes = await fetch(
-          `https://csfloat.com/api/v1/listings?market_hash_name=${encodeURIComponent(item.market_hash_name)}`,
-          { headers: { Authorization: CSFLOAT_API_KEY } }
-        );
-        if (floatRes.ok) {
-          const floatData = await floatRes.json();
-          console.log(`[steam-inventory] [${idx}] CSFloat retornou ${floatData?.data?.length || 0} resultados`);
-          // Busca a melhor correspondência
-          if (floatData && floatData.data && floatData.data.length > 0) {
-            csfloat = findBestMatch(item, floatData.data);
-          }
-        } else {
-          console.log(`[steam-inventory] [${idx}] Erro CSFloat`, { status: floatRes.status });
-        }
-      } catch (e) {
-        console.log(`[steam-inventory] [${idx}] Erro ao buscar CSFloat`, e);
-        csfloat = null;
-      }
-      return {
-        ...item,
-        csfloat
-      };
-    })
-  );
-
-  console.log('[steam-inventory] Finalizando, itens enriquecidos:', enrichedItems.length);
-  // 3. Retorna inventário enriquecido
-  res.status(200).json({
-    ...inventory,
-    descriptions: enrichedItems
-  });
+  return res.status(200).json(inventory);
 } 
