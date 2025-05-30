@@ -144,6 +144,9 @@ export default async function handler(req, res) {
             const colTag = item.tags.find(t => t.category === 'ItemSet' || t.localized_category_name === 'Collection');
             if (colTag) collection = colTag.localized_tag_name || colTag.internal_name;
           }
+          // Corrigir mapeamento para paintseed e patternindex
+          paintseed = floatInfo.paintseed ?? floatInfo.seed ?? null;
+          patternindex = floatInfo.patternindex ?? floatInfo.paintindex ?? floatInfo.pattern ?? null;
         }
       } catch (e) {
         console.log('[steam-inventory] Erro ao enriquecer item:', name, e);
