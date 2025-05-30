@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Credentials': true,
     'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
     'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
-    'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   };
 
   // Aplicar headers CORS
@@ -19,9 +19,15 @@ export default async function handler(req, res) {
     res.setHeader(key, value);
   });
 
+  // Tratar requisição OPTIONS
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
+  }
+
+  // Verificar origem
+  if (!origin || !allowedOrigins.includes(origin)) {
+    return res.status(403).json({ error: 'Origem não permitida' });
   }
 
   if (req.method !== 'GET') {
