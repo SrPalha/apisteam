@@ -149,7 +149,7 @@ export default async function handler(req, res) {
         name,
         image,
         price,
-        float: floatInfo?.floatvalue ?? item.float ?? null,
+        float: (floatInfo?.floatvalue ?? floatInfo?.float ?? floatInfo?.wear ?? item.float ?? null),
         paintseed,
         patternindex,
         condition,
