@@ -55,20 +55,26 @@ export default async function handler(req, res) {
     // Padronizar resposta para o frontend
     const items = filtered.map(item => ({
       id: item.assetid || item.id,
-      name: item.marketname || item.name || item.markethashname,
-      image: item.image || item.icon_url,
-      price: item.price || item.pricelatest || 0,
-      float: item.float,
-      rarity: item.rarity || item.tag6,
-      condition: item.wear || item.condition || item.tag5,
-      stickers: item.stickers || [],
-      type: item.itemgroup || item.type,
-      collection: item.collection,
-      marketable: item.marketable,
-      tradable: item.tradable,
-      time: item.time,
-      priceChange: item.priceChange,
+      name: item.marketname || item.name || item.markethashname || '',
+      image: item.image || item.icon_url || '',
+      price: item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0,
+      float: item.float ?? null,
+      condition: (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS'),
+      rarity: item.rarity || item.tag6 || '',
+      stickers: Array.isArray(item.stickers)
+        ? item.stickers.map(s => ({ name: s.name, image: s.image || s.icon_url || '' }))
+        : [],
+      type: item.itemgroup || item.type || '',
+      collection: item.collection || '',
+      marketable: item.marketable ?? 0,
+      tradable: item.tradable ?? 0,
+      listedAt: item.time || null,
+      priceChange: item.priceChange ?? null,
     }));
+
+    if (items.length > 0) {
+      console.log('[steam-inventory] Exemplo de item retornado:', items[0]);
+    }
 
     console.log(`[steam-inventory] Inventário processado: ${items.length} skins`);
     return res.status(200).json({ items });
