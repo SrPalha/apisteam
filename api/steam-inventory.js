@@ -39,7 +39,6 @@ export default async function handler(req, res) {
 
     const inventory = await response.json();
 
-    // Validação básica do retorno
     if (!Array.isArray(inventory) || inventory.length === 0) {
       console.log('[steam-inventory] Inventário vazio ou formato inesperado');
       return res.status(200).json({ items: [], message: 'Inventário vazio ou não encontrado.' });
@@ -52,32 +51,74 @@ export default async function handler(req, res) {
       )
     );
 
-    // Padronizar resposta para o frontend
-    const items = filtered.map(item => ({
-      id: item.assetid || item.id,
-      name: item.marketname || item.name || item.markethashname || '',
-      image: item.image || item.icon_url || '',
-      price: item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0,
-      float: item.float ?? null,
-      condition: (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS'),
-      rarity: item.rarity || item.tag6 || '',
-      stickers: Array.isArray(item.stickers)
+    // Enriquecer cada item com detalhes extras
+    const enrichedItems = await Promise.all(filtered.map(async (item) => {
+      let floatInfo = null;
+      let collection = '';
+      let itemtype = '';
+      let rarity = item.rarity || item.tag6 || '';
+      let stickers = Array.isArray(item.stickers)
         ? item.stickers.map(s => ({ name: s.name, image: s.image || s.icon_url || '' }))
-        : [],
-      type: item.itemgroup || item.type || '',
-      collection: item.collection || '',
-      marketable: item.marketable ?? 0,
-      tradable: item.tradable ?? 0,
-      listedAt: item.time || null,
-      priceChange: item.priceChange ?? null,
+        : [];
+      try {
+        // Buscar detalhes do item
+        const itemUrl = `https://www.steamwebapi.com/steam/api/item?key=${API_KEY}&market_hash_name=${encodeURIComponent(item.marketname || item.name || item.markethashname || '')}`;
+        const itemResp = await fetchWithTimeout(itemUrl, { timeout: 10000 });
+        if (itemResp.ok) {
+          const itemData = await itemResp.json();
+          itemtype = itemData.itemtype || itemData.type || itemtype;
+          rarity = itemData.rarity || rarity;
+          // Buscar float se houver inspect link
+          const inspectUrl = itemData.inspectlink || item.inspect_link;
+          if (inspectUrl) {
+            const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(inspectUrl)}`;
+            const floatResp = await fetchWithTimeout(floatUrl, { timeout: 8000 });
+            if (floatResp.ok) {
+              floatInfo = await floatResp.json();
+            }
+          }
+          // Buscar coleção
+          const colUrl = `https://www.steamwebapi.com/steam/api/cs/collections?key=${API_KEY}`;
+          const colResp = await fetchWithTimeout(colUrl, { timeout: 8000 });
+          if (colResp.ok) {
+            const colData = await colResp.json();
+            if (Array.isArray(colData)) {
+              for (const col of colData) {
+                if (col.items && col.items.some(i => i.markethashname === (item.marketname || item.name || item.markethashname || ''))) {
+                  collection = col.name;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[steam-inventory] Erro ao enriquecer item:', item.name, e);
+      }
+      return {
+        id: item.assetid || item.id,
+        name: item.marketname || item.name || item.markethashname || '',
+        image: item.image || item.icon_url || '',
+        price: item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0,
+        float: floatInfo?.floatvalue ?? item.float ?? null,
+        condition: (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS'),
+        rarity,
+        stickers,
+        type: itemtype || item.itemgroup || item.type || '',
+        collection,
+        marketable: item.marketable ?? 0,
+        tradable: item.tradable ?? 0,
+        listedAt: item.time || null,
+        priceChange: item.priceChange ?? null,
+      };
     }));
 
-    if (items.length > 0) {
-      console.log('[steam-inventory] Exemplo de item retornado:', items[0]);
+    if (enrichedItems.length > 0) {
+      console.log('[steam-inventory] Exemplo de item enriquecido:', enrichedItems[0]);
     }
 
-    console.log(`[steam-inventory] Inventário processado: ${items.length} skins`);
-    return res.status(200).json({ items });
+    console.log(`[steam-inventory] Inventário processado: ${enrichedItems.length} skins`);
+    return res.status(200).json({ items: enrichedItems });
   } catch (err) {
     if (err.name === 'AbortError') {
       console.log('[steam-inventory] Timeout na requisição para SteamWebAPI');
