@@ -66,8 +66,25 @@ export default async function handler(req, res) {
       let tradable = item.tradable ?? 0;
       let image = item.image || item.icon_url || '';
       let price = item.pricelatest ?? item.pricesafe ?? item.pricereal ?? item.price ?? 0;
-      let condition = (item.wear || item.condition || item.tag5 || '').replace('Field-Tested', 'FT').replace('Minimal Wear', 'MW').replace('Factory New', 'FN').replace('Well-Worn', 'WW').replace('Battle-Scarred', 'BS');
+      let condition = (item.wear || item.condition || item.tag5 || '').replace('FT', 'Field-Tested').replace('MW', 'Minimal Wear').replace('FN', 'Factory New').replace('WW', 'Well-Worn').replace('BS', 'Battle-Scarred');
+      // Se vier abreviado, mapear para texto completo
+      const conditionMap = {
+        'FT': 'Field-Tested',
+        'MW': 'Minimal Wear',
+        'FN': 'Factory New',
+        'WW': 'Well-Worn',
+        'BS': 'Battle-Scarred',
+        'Field-Tested': 'Field-Tested',
+        'Minimal Wear': 'Minimal Wear',
+        'Factory New': 'Factory New',
+        'Well-Worn': 'Well-Worn',
+        'Battle-Scarred': 'Battle-Scarred',
+      };
+      if (conditionMap[condition]) condition = conditionMap[condition];
       let name = item.marketname || item.name || item.markethashname || '';
+      // Pega o inspectlink individual do inventário
+      const inventoryInspectLink = item.inspectlink || (item.actions && item.actions[0]?.link);
+      let usedInspectLink = inventoryInspectLink;
       try {
         // Buscar detalhes do item
         const itemUrl = `https://www.steamwebapi.com/steam/api/item?key=${API_KEY}&market_hash_name=${encodeURIComponent(name)}`;
@@ -77,18 +94,31 @@ export default async function handler(req, res) {
           itemtype = itemData.itemtype || itemData.type || itemtype;
           rarity = itemData.rarity || rarity;
           image = itemData.image || image;
+          // Se não houver inspectlink individual, tenta do /api/item
+          if (!usedInspectLink && itemData.inspectlink) {
+            usedInspectLink = itemData.inspectlink;
+          }
           // Buscar float se houver inspect link
-          const inspectUrl = itemData.inspectlink || item.inspect_link;
-          if (inspectUrl) {
-            const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(inspectUrl)}`;
+          if (usedInspectLink) {
+            console.log('[steam-inventory] Buscando float para', name, usedInspectLink);
+            const floatUrl = `https://www.steamwebapi.com/steam/api/float?key=${API_KEY}&url=${encodeURIComponent(usedInspectLink)}`;
             const floatResp = await fetchWithTimeout(floatUrl, { timeout: 8000 });
             if (floatResp.ok) {
               floatInfo = await floatResp.json();
               if (floatInfo) {
                 paintseed = floatInfo.paintseed ?? null;
                 patternindex = floatInfo.paintindex ?? null;
+                if (floatInfo.floatvalue !== undefined) {
+                  console.log('[steam-inventory] Float encontrado para', name, floatInfo.floatvalue);
+                } else {
+                  console.log('[steam-inventory] Float NÃO encontrado para', name);
+                }
               }
+            } else {
+              console.log('[steam-inventory] Falha ao buscar float para', name, floatResp.status);
             }
+          } else {
+            console.log('[steam-inventory] Sem inspect link para buscar float de', name);
           }
           // Buscar coleção
           const colUrl = `https://www.steamwebapi.com/steam/api/cs/collections?key=${API_KEY}`;
@@ -103,6 +133,14 @@ export default async function handler(req, res) {
                 }
               }
             }
+          }
+          // Fallback: tenta pegar coleção do campo tag7 ou dos tags
+          if (!collection && item.tag7) {
+            collection = item.tag7;
+          }
+          if (!collection && Array.isArray(item.tags)) {
+            const colTag = item.tags.find(t => t.category === 'ItemSet' || t.localized_category_name === 'Collection');
+            if (colTag) collection = colTag.localized_tag_name || colTag.internal_name;
           }
         }
       } catch (e) {
